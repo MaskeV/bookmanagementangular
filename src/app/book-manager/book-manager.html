@@ -1,0 +1,180 @@
+<div class="page">
+  <header class="header">
+    <div>
+      <h1>Book Management</h1>
+      <p>{{ books().length }} {{ books().length === 1 ? 'book' : 'books' }} in the library</p>
+    </div>
+    <div class="user-box">
+      <span>{{ user()?.name }}{{ user()?.role ? ' (' + user()?.role + ')' : '' }}</span>
+      <button (click)="logout()">Log out</button>
+    </div>
+  </header>
+
+  <!-- Search with suggestions -->
+  <div class="search" #searchBox>
+    <form class="search-bar" (ngSubmit)="runSearch(search())">
+      <input
+        name="search"
+        placeholder="Search by title, author, category..."
+        autocomplete="off"
+        [ngModel]="search()"
+        (ngModelChange)="onSearchInput($event)"
+        (focus)="showSuggestions.set(true)"
+        (keydown)="onSearchKeys($event)"
+      />
+      @if (search()) {
+        <button type="button" class="clear" (click)="clearSearch()">✕</button>
+      }
+      <button class="search-btn">Search</button>
+    </form>
+
+    @if (showSuggestions() && suggestions().length > 0) {
+      <ul class="suggestions">
+        @for (s of suggestions(); track s; let i = $index) {
+          @let p = suggestionParts(s);
+          <li
+            [class.active]="i === activeIndex()"
+            (mouseenter)="activeIndex.set(i)"
+            (click)="runSearch(s)"
+          >
+            <span class="icon">🔍</span>
+            <div>{{ p.before }}<span>{{ p.match }}</span><b>{{ p.after }}</b></div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="card filters">
+    <label>
+      Category
+      <select [ngModel]="filters().category" (ngModelChange)="changeFilter('category', $event)">
+        <option value="">All</option>
+        @for (v of categories(); track v) {
+          <option [value]="v">{{ v }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Language
+      <select [ngModel]="filters().language" (ngModelChange)="changeFilter('language', $event)">
+        <option value="">All</option>
+        @for (v of languages(); track v) {
+          <option [value]="v">{{ v }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Publisher
+      <select [ngModel]="filters().publisher" (ngModelChange)="changeFilter('publisher', $event)">
+        <option value="">All</option>
+        @for (v of publishers(); track v) {
+          <option [value]="v">{{ v }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Status
+      <select [ngModel]="filters().available" (ngModelChange)="changeFilter('available', $event)">
+        <option value="">All</option>
+        <option value="true">Available</option>
+        <option value="false">Not available</option>
+      </select>
+    </label>
+
+    @if (hasFilters()) {
+      <button type="button" class="btn gray clear-filters" (click)="clearFilters()">Clear filters</button>
+    }
+  </div>
+
+  <!-- Add / edit form -->
+  @if (canEdit()) {
+    <form class="card form" (ngSubmit)="saveBook()">
+      <h2>{{ form().id ? 'Edit book' : 'Add a new book' }}</h2>
+      <div class="grid">
+        @for (f of fields; track f.name) {
+          <label [class.wide]="f.wide">
+            {{ f.label }}
+            <input
+              [type]="f.type || 'text'"
+              [name]="f.name"
+              [ngModel]="form()[f.name]"
+              (ngModelChange)="handleChange(f, $event)"
+            />
+          </label>
+        }
+      </div>
+
+      <div class="form-actions">
+        <label class="check">
+          <input
+            type="checkbox"
+            name="available"
+            [ngModel]="!!form().available"
+            (ngModelChange)="setAvailable($event)"
+          />
+          Available
+        </label>
+        <div>
+          @if (form().id) {
+            <button type="button" class="btn gray" (click)="cancelEdit()">Cancel</button>
+          }
+          <button class="btn primary">{{ form().id ? 'Update book' : 'Add book' }}</button>
+        </div>
+      </div>
+    </form>
+  }
+
+  <!-- Table -->
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Title</th>
+          <th>Author</th>
+          <th>Category</th>
+          <th>Year</th>
+          <th>Qty</th>
+          <th>Status</th>
+          <th>Description</th>
+          @if (canEdit()) {
+            <th>Actions</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (book of books(); track book.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td class="title">{{ book.title }}</td>
+            <td>{{ book.author }}</td>
+            <td><span class="tag">{{ book.category }}</span></td>
+            <td>{{ book.publicationYear }}</td>
+            <td>{{ book.quantity }}</td>
+            <td>
+              <span class="badge" [class.ok]="book.available" [class.no]="!book.available">
+                {{ book.available ? 'Available' : 'Not available' }}
+              </span>
+            </td>
+            <td class="desc">{{ book.description }}</td>
+            @if (canEdit()) {
+              <td class="actions">
+                <button class="btn small blue" (click)="editBook(book)">Edit</button>
+                <button class="btn small red" (click)="deleteBook(book.id)">Delete</button>
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9" class="empty">No books found. Add one above or try a different search.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
