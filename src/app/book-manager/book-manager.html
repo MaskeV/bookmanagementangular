@@ -93,18 +93,33 @@
 
   <!-- Add / edit form -->
   @if (canEdit()) {
-    <form class="card form" (ngSubmit)="saveBook()">
+    <form class="card form" ngNativeValidate (ngSubmit)="saveBook()">
       <h2>{{ form().id ? 'Edit book' : 'Add a new book' }}</h2>
       <div class="grid">
         @for (f of fields; track f.name) {
           <label [class.wide]="f.wide">
-            {{ f.label }}
-            <input
-              [type]="f.type || 'text'"
-              [name]="f.name"
-              [ngModel]="form()[f.name]"
-              (ngModelChange)="handleChange(f, $event)"
-            />
+            {{ f.label }}{{ f.required ? ' *' : '' }}
+            @if (f.name === 'language') {
+              <select
+                name="language"
+                [required]="!!f.required"
+                [ngModel]="form().language ?? ''"
+                (ngModelChange)="handleChange(f, $event)"
+              >
+                <option value="">Select language</option>
+                @for (l of languageChoices(); track l) {
+                  <option [value]="l">{{ l }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                [type]="f.type || 'text'"
+                [name]="f.name"
+                [required]="!!f.required"
+                [ngModel]="form()[f.name]"
+                (ngModelChange)="handleChange(f, $event)"
+              />
+            }
           </label>
         }
       </div>
@@ -138,6 +153,7 @@
           <th>Title</th>
           <th>Author</th>
           <th>Category</th>
+          <th>Language</th>
           <th>Year</th>
           <th>Qty</th>
           <th>Status</th>
@@ -154,6 +170,7 @@
             <td class="title">{{ book.title }}</td>
             <td>{{ book.author }}</td>
             <td><span class="tag">{{ book.category }}</span></td>
+            <td>{{ book.language }}</td>
             <td>{{ book.publicationYear }}</td>
             <td>{{ book.quantity }}</td>
             <td>
@@ -171,7 +188,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="9" class="empty">No books found. Add one above or try a different search.</td>
+            <td colspan="10" class="empty">No books found. Add one above or try a different search.</td>
           </tr>
         }
       </tbody>

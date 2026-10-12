@@ -12,6 +12,7 @@ interface FormField {
   label: string;
   type?: 'number';
   wide?: boolean;
+  required?: boolean;
 }
 
 const emptyFilters: BookFilters = { category: '', language: '', publisher: '', available: '' };
@@ -42,12 +43,12 @@ export class BookManager implements OnInit {
   private bookService = inject(BookService);
 
   readonly fields: FormField[] = [
-    { name: 'title', label: 'Title' },
-    { name: 'author', label: 'Author' },
-    { name: 'category', label: 'Category' },
+    { name: 'title', label: 'Title', required: true },
+    { name: 'author', label: 'Author', required: true },
+    { name: 'category', label: 'Category', required: true },
     { name: 'publisher', label: 'Publisher' },
     { name: 'publicationYear', label: 'Year', type: 'number' },
-    { name: 'language', label: 'Language' },
+    { name: 'language', label: 'Language', required: true },
     { name: 'quantity', label: 'Quantity', type: 'number' },
     { name: 'description', label: 'Description', wide: true },
   ];
@@ -69,6 +70,18 @@ export class BookManager implements OnInit {
   languages = computed(() => uniqueValues(this.allBooks(), 'language'));
   publishers = computed(() => uniqueValues(this.allBooks(), 'publisher'));
   hasFilters = computed(() => Object.values(this.filters()).some(Boolean));
+
+  private readonly defaultLanguages = ['English', 'Hindi', 'Marathi', 'Spanish', 'French', 'German'];
+
+  // defaults + languages already used by books + the one being edited, so nothing disappears
+  languageChoices = computed(() => {
+    const current = this.form().language;
+    return [...new Set([
+      ...this.defaultLanguages,
+      ...this.languages(),
+      ...(current ? [current] : []),
+    ])].sort((a, b) => a.localeCompare(b));
+  });
 
   private searchBox = viewChild<ElementRef<HTMLElement>>('searchBox');
   private typing$ = new Subject<string>();
@@ -145,7 +158,15 @@ export class BookManager implements OnInit {
   }
 
   saveBook() {
-    this.bookService.save(this.form()).subscribe({
+    // browser checks the required fields; this also rejects values that are only spaces
+    const book = this.form();
+    const missing = this.fields.filter((f) => f.required && !String(book[f.name] ?? '').trim());
+    if (missing.length) {
+      alert(`Please fill in: ${missing.map((f) => f.label).join(', ')}`);
+      return;
+    }
+
+    this.bookService.save(book).subscribe({
       next: () => {
         this.form.set(emptyForm());
         this.refresh();

@@ -38,6 +38,8 @@
 .grid label.wide { grid-column: 1 / -1; }
 .grid input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-weight: 400; color: #1e293b; }
 .grid input:focus { outline: none; border-color: #4338ca; box-shadow: 0 0 0 3px rgba(67, 56, 202, .15); }
+.grid select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-weight: 400; color: #1e293b; background: #fff; }
+.grid select:focus { outline: none; border-color: #4338ca; box-shadow: 0 0 0 3px rgba(67, 56, 202, .15); }
 .form-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
 .check { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; }
 
