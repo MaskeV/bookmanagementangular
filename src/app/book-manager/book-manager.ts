@@ -119,8 +119,7 @@ export class BookManager implements OnInit {
   }
 
   ngOnInit() {
-    this.loadBooks('', emptyFilters);
-    this.loadAllBooks();
+    this.loadBooks('', emptyFilters); // one request fills both the table and the dropdown options
   }
 
   // ---------- API calls ----------
@@ -129,7 +128,11 @@ export class BookManager implements OnInit {
   loadBooks(query: string, f: BookFilters) {
     this.listSub?.unsubscribe(); // ignore an older, slower response
     this.listSub = this.bookService.search(query, f).subscribe({
-      next: (list) => this.books.set(applyFilters(list, f)),
+      next: (list) => {
+        this.books.set(applyFilters(list, f));
+        // an unfiltered response is the full list, so reuse it for the dropdown options
+        if (!query && !Object.values(f).some(Boolean)) this.allBooks.set(list);
+      },
       error: () => {},
     });
   }
@@ -143,7 +146,8 @@ export class BookManager implements OnInit {
 
   refresh() {
     this.loadBooks(this.search(), this.filters());
-    this.loadAllBooks();
+    // only needed when the table is filtered/searched (then it isn't the full list)
+    if (this.search() || this.hasFilters()) this.loadAllBooks();
   }
 
   changeFilter(name: keyof BookFilters, value: string) {
@@ -166,10 +170,22 @@ export class BookManager implements OnInit {
       return;
     }
 
+    const isNew = !book.id;
     this.bookService.save(book).subscribe({
-      next: () => {
+      next: (saved) => {
         this.form.set(emptyForm());
-        this.refresh();
+        // a text search runs on the server, so ask it again; otherwise update the lists locally
+        if (this.search()) {
+          this.refresh();
+          return;
+        }
+        const savedBook: Book = typeof saved === 'string' ? book : saved;
+        this.allBooks.update((list) =>
+          isNew
+            ? [...list, savedBook]
+            : list.map((b) => (b.id === savedBook.id ? savedBook : b))
+        );
+        this.books.set(applyFilters(this.allBooks(), this.filters()));
       },
       error: (err: HttpErrorResponse) => {
         if (err.status === 401) return; // interceptor already logged the user out
@@ -181,7 +197,11 @@ export class BookManager implements OnInit {
   deleteBook(id: number | string | undefined) {
     if (id === undefined || !window.confirm('Delete this book?')) return;
     this.bookService.delete(id).subscribe({
-      next: () => this.refresh(),
+      next: () => {
+        const remove = (list: Book[]) => list.filter((b) => b.id !== id);
+        this.allBooks.update(remove);
+        this.books.update(remove);
+      },
       error: (err: HttpErrorResponse) => {
         if (err.status === 401) return;
         alert(err.status === 403 ? "You don't have permission to do this." : 'Could not delete the book.');
